@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     ValueFlag<string> fastaFile(parser, "fasta", "Optional input FASTA/FASTQ file containing the reference sequence used for parsing CRAM files", {"fasta"});
     ValueFlag<int> chimericDistance(parser, "DISTANCE", "Set the maximum accepted distance between read mates.  Mates beyond this distance will be counted as chimeric pairs. Default: 2000000 [bp]", {"chimeric-distance"});
     ValueFlag<unsigned int> fragmentSamples(parser, "SAMPLES", "Set the number of samples to take when computing fragment sizes.  Requires the --bed argument. Default: 1000000", {"fragment-samples"});
-    ValueFlag<unsigned int> mappingQualityThreshold(parser,"QUALITY", "Set the lower bound on read quality for exon coverage counting. Reads below this number are excluded from coverage metrics. Default: 255", {'q', "mapping-quality"});
+    ValueFlag<unsigned int> mappingQualityThreshold(parser,"QUALITY", "Set the lower bound on read quality for exon coverage counting. Reads below this number are excluded from coverage metrics. Default: 60", {'q', "mapping-quality"}); // changed from 255 to 60 (bhaas)
     ValueFlag<unsigned int> baseMismatchThreshold(parser, "MISMATCHES", "Set the maximum number of allowed mismatches between a read and the reference sequence. Reads with more than this number of mismatches are excluded from coverage metrics. Default: 6", {"base-mismatch"});
     ValueFlag<int> biasOffset(parser, "OFFSET", "Set the offset into the gene for the 3' and 5' windows in bias calculation.  A positive value shifts the 3' and 5' windows towards eachother, while a negative value shifts them apart.  Default: 150 [bp]", {"offset"});
     ValueFlag<int> biasWindow(parser, "SIZE", "Set the size of the 3' and 5' windows in bias calculation.  Default: 100 [bp]", {"window-size"});
@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
         const int CHIMERIC_DISTANCE = chimericDistance ? chimericDistance.Get() : 2000000;
         const unsigned int FRAGMENT_SIZE_SAMPLES = fragmentSamples ? fragmentSamples.Get() : 1000000u;
         const unsigned int BASE_MISMATCH_THRESHOLD = baseMismatchThreshold ? baseMismatchThreshold.Get() : 6u;
-        const unsigned int MAPPING_QUALITY_THRESHOLD = mappingQualityThreshold ? mappingQualityThreshold.Get() : (LegacyMode.Get() ? 4u : 255u);
+        const unsigned int MAPPING_QUALITY_THRESHOLD = mappingQualityThreshold ? mappingQualityThreshold.Get() : (LegacyMode.Get() ? 4u : 60u); // using MQ min 60 for high quality definition.  bhaas
         const unsigned int COVERAGE_MASK = coverageMaskSize ? coverageMaskSize.Get() : 500u;
 //        const int SPLIT_DISTANCE = 100;
         const int VERBOSITY = verbosity ? verbosity.Get() : 0;
@@ -326,7 +326,9 @@ int main(int argc, char* argv[])
                         }
                         if (discard) continue;
 
-                        bool highQuality = (mismatches <= BASE_MISMATCH_THRESHOLD && (unpaired.Get() || alignment.ProperPair()) && alignment.MapQuality() >= MAPPING_QUALITY_THRESHOLD);
+                        //bool highQuality = (mismatches <= BASE_MISMATCH_THRESHOLD && (unpaired.Get() || alignment.ProperPair()) && alignment.MapQuality() >= MAPPING_QUALITY_THRESHOLD);
+			// just rely on mapping quality to determine whether highQuality or not. // bhaas
+			bool highQuality = (alignment.MapQuality() >= MAPPING_QUALITY_THRESHOLD);
 
                         //now record intron/exon metrics by intersecting filtered reads with the list of features
                         if (alignment.ChrID() < 0 || alignment.ChrID() >= nChrs)
