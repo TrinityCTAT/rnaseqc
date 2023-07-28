@@ -1,0 +1,78 @@
+Sample	MCF7.illumina.aligned.sorted.bam
+Mapping Rate	0.842814
+Unique Rate of Mapped	1
+Duplicate Rate of Mapped	0
+Duplicate Rate of Mapped, excluding Globins	0
+Base Mismatch	0.00239316
+End 1 Mapping Rate	0.842814
+End 2 Mapping Rate	0.842814
+End 1 Mismatch Rate	0.00234077
+End 2 Mismatch Rate	0.00244555
+Expression Profiling Efficiency	0.676811
+High Quality Rate	0.948971
+Exonic Rate	0.803037
+Intronic Rate	0.0755135
+Intergenic Rate	0.0343455
+Intragenic Rate	0.87855
+Ambiguous Alignment Rate	0.087104
+High Quality Exonic Rate	0.825115
+High Quality Intronic Rate	0.0668916
+High Quality Intergenic Rate	0.0203399
+High Quality Intragenic Rate	0.892007
+High Quality Ambiguous Alignment Rate	0.0876531
+Discard Rate	0
+rRNA Rate	0.00820458
+End 1 Sense Rate	0.0276686
+End 2 Sense Rate	0.973268
+Avg. Splits per Read	0.455125
+Alternative Alignments	39703566
+Chimeric Fragments	3631270
+Chimeric Alignment Rate	0.0354729
+Duplicate Reads	0
+End 1 Antisense	88743101
+End 2 Antisense	2439086
+End 1 Bases	15457503070
+End 2 Bases	15457503070
+End 1 Mapped Reads	102367570
+End 2 Mapped Reads	102367570
+End 1 Mismatches	36182474
+End 2 Mismatches	37802162
+End 1 Sense	2525272
+End 2 Sense	88801724
+Exonic Reads	164409877
+Failed Vendor QC	0
+High Quality Reads	194287736
+Intergenic Reads	7031735
+Intragenic Reads	179870151
+Ambiguous Reads	17833254
+Intronic Reads	15460274
+Low Mapping Quality	49266913
+Low Quality Reads	10447404
+Mapped Duplicate Reads	0
+Mapped Reads	204735140
+Mapped Unique Reads	204735140
+Mismatched Bases	73984636
+Non-Globin Reads	204735025
+Non-Globin Duplicate Reads	0
+Reads used for Intron/Exon counts	204735140
+rRNA Reads	1679766
+Total Bases	30915006140
+Total Mapped Pairs	102367570
+Total Reads	283952017
+Unique Mapping, Vendor QC Passed Reads	242918618
+Unpaired Reads	0
+Read Length	151
+Genes Detected	21724
+Estimated Library Complexity	0
+Genes used in 3' bias	10465
+Mean 3' bias	0.519977
+Median 3' bias	0.520424
+3' bias Std	0.284207
+3' bias MAD_Std	0.34037
+3' Bias, 25th Percentile	0.295455
+3' Bias, 75th Percentile	0.753828
+Median of Avg Transcript Coverage	4.48238
+Median of Transcript Coverage Std	4.04298
+Median of Transcript Coverage CV	0.874133
+Median Exon CV	0.234553
+Exon CV MAD	0.224613
