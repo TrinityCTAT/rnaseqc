@@ -145,14 +145,18 @@ int main(int argc, char* argv[])
                 }
             }
         }
-		//ensure that the features are sorted.  This MUST be true for the exon alignment metrics
+        //ensure that the features are sorted.  This MUST be true for the exon alignment metrics
         if (VERBOSITY > 1) cout << "Processing GTF Features..." << endl;
         for (auto beg = features.begin(); beg != features.end(); ++beg)
         {
+            // walking chromosomes
             beg->second.sort(compIntervalStart);
-            for (auto feat = beg->second.begin(); feat != beg->second.end(); ++feat)
+            // features on chromosome are sorted
+            for (auto feat = beg->second.begin(); feat != beg->second.end(); ++feat) {
+                // assign exons to corresponding gene features 
                 if (feat->type == FeatureType::Exon) exonsForGene[feat->gene_id].push_back(feat->feature_id);
-
+            }
+            
         }
         time(&t1); //record the time taken to parse the GTF
         if (!(geneList.size() && exonList.size()))
@@ -239,6 +243,7 @@ int main(int argc, char* argv[])
             if (VERBOSITY) cout<<"Parsing bam..."<<endl;
             time(&report_time);
             time(&t2);
+
             while (bam.next(alignment))
             {
                 //try to print an update to stdout every 250,000 reads, but no more than once every 10 seconds
@@ -250,36 +255,51 @@ int main(int argc, char* argv[])
                     time(&report_time);
                     if (VERBOSITY > 1) cout << "Time elapsed: " << difftime(t2, t1) << "; Alignments processed: " << alignmentCount << endl;
                 }
+
                 //count metrics based on basic read data
-                if (alignment.SecondaryFlag()) counter.increment("Alternative Alignments");
-                else if (alignment.QCFailFlag()) counter.increment("Failed Vendor QC");
-                else if (alignment.MapQuality() < MAPPING_QUALITY_THRESHOLD) counter.increment("Low Mapping Quality");
+                if (alignment.SecondaryFlag())
+                    counter.increment("Alternative Alignments");
+                else if (alignment.QCFailFlag())
+                    counter.increment("Failed Vendor QC");
+                else if (alignment.MapQuality() < MAPPING_QUALITY_THRESHOLD)
+                    counter.increment("Low Mapping Quality");
+                
                 if (alignment.SupplementaryFlag() && !(LegacyMode.Get() || readStringTag(alignment, chimeric_tag, trash)))
                 {
                     counter.increment("Chimeric Fragments_auto");
                     if(excludeChimeric.Get()) continue;
                 }
-                if (!(alignment.SecondaryFlag() || alignment.QCFailFlag() || alignment.SupplementaryFlag()))
+
+                if ( ! (alignment.SecondaryFlag() || alignment.QCFailFlag() || alignment.SupplementaryFlag() ) )
                 {
                     counter.increment("Unique Mapping, Vendor QC Passed Reads");
+
                     //raw counts:
                     if (!alignment.PairedFlag()) counter.increment("Unpaired Reads");
+
                     if (alignment.MappedFlag())
                     {
                         counter.increment("Mapped Reads");
 
-                        if (alignment.DuplicateFlag()) counter.increment("Mapped Duplicate Reads");
-                        else counter.increment("Mapped Unique Reads");
+                        if (alignment.DuplicateFlag())
+                            counter.increment("Mapped Duplicate Reads");
+                        else
+                            counter.increment("Mapped Unique Reads");
+
                         //check length against max read length
                         unsigned int alignmentSize = alignment.PositionEnd() - alignment.Position();
                         if (LegacyMode.Get() && alignmentSize > LEGACY_MAX_READ_LENGTH) continue;
+
                         if (!readLength) current_chrom = chromosomeMap(sequences[alignment.ChrID()].Name);
+
                         if (alignmentSize > readLength) readLength = alignment.Length();
+
                         if (!LegacyMode.Get() && readStringTag(alignment, chimeric_tag, trash))
                         {
                             if (alignment.FirstFlag()) counter.increment("Chimeric Fragments_tag");
                             if(excludeChimeric.Get()) continue;
                         }
+
                         if (alignment.PairedFlag() && alignment.MateMappedFlag() )
                         {
                             if (alignment.FirstFlag()) counter.increment("Total Mapped Pairs");
@@ -289,6 +309,7 @@ int main(int argc, char* argv[])
                                 if(excludeChimeric.Get()) continue;
                             }
                         }
+
                         //Get tag data
                         int32_t mismatches = 0;
                         if (alignment.GetIntTag(NM, mismatches))
@@ -314,6 +335,7 @@ int main(int argc, char* argv[])
                             counter.increment("Mismatched Bases", mismatches);
                         }
                         counter.increment("Total Bases", alignment.Length());
+
                         //generic filter tags:
                         bool discard = false;
                         for (auto tag = tags.begin(); tag != tags.end(); ++tag)
@@ -327,9 +349,9 @@ int main(int argc, char* argv[])
                         if (discard) continue;
 
                         //bool highQuality = (mismatches <= BASE_MISMATCH_THRESHOLD && (unpaired.Get() || alignment.ProperPair()) && alignment.MapQuality() >= MAPPING_QUALITY_THRESHOLD);
-			// just rely on mapping quality to determine whether highQuality or not. // bhaas
-			bool highQuality = (alignment.MapQuality() >= MAPPING_QUALITY_THRESHOLD);
-
+                        // just rely on mapping quality to determine whether highQuality or not. // bhaas
+                        bool highQuality = (alignment.MapQuality() >= MAPPING_QUALITY_THRESHOLD);
+                        
                         //now record intron/exon metrics by intersecting filtered reads with the list of features
                         if (alignment.ChrID() < 0 || alignment.ChrID() >= nChrs)
                         {
@@ -338,9 +360,13 @@ int main(int argc, char* argv[])
                         }
                         else
                         {
-                            if (highQuality) counter.increment("High Quality Reads");
-                            else counter.increment("Low Quality Reads");
+                            if (highQuality)
+                                counter.increment("High Quality Reads");
+                            else
+                                counter.increment("Low Quality Reads");
+
                             counter.increment("Reads used for Intron/Exon counts");
+
                             vector<Feature> blocks;
                             string chrName = sequences[alignment.ChrID()].Name;
                             chrom chr = chromosomeMap(chrName); //parse out a chromosome shorthand
@@ -354,17 +380,21 @@ int main(int argc, char* argv[])
                             }
                             else if (last_position > alignment.Position())
                                 cerr << "Warning: The input bam does not appear to be sorted. An unsorted bam will yield incorrect results" << endl;
-                            last_position = alignment.Position();
 
+                            last_position = alignment.Position();
+                            
                             //extract each cigar block from the alignment
                             unsigned int length = extractBlocks(alignment, blocks, chr, LegacyMode.Get());
                             counter.increment("Alignment Blocks", blocks.size());
                             trimFeatures(alignment, features[chr], baseCoverage); //drop features that appear before this read
-
+                            
                             //run the read through exon metrics
-                            if (LegacyMode.Get()) legacyExonAlignmentMetrics(LEGACY_SPLIT_DISTANCE, features, counter, blocks, alignment, sequences, length, STRAND_ORIENTATION, baseCoverage, highQuality, unpaired.Get());
+                            if (LegacyMode.Get())
+                                legacyExonAlignmentMetrics(LEGACY_SPLIT_DISTANCE, features, counter, blocks, alignment, sequences, length, STRAND_ORIENTATION, baseCoverage, highQuality, unpaired.Get());
                             else {
-                                double gcContent = exonAlignmentMetrics(features, counter, blocks, alignment, sequences, length, STRAND_ORIENTATION, baseCoverage, highQuality, unpaired.Get(), gcContentFragmentTracker, fastaReader);
+                                double gcContent = exonAlignmentMetrics(features, counter, blocks, alignment, sequences, length,
+                                                                        STRAND_ORIENTATION, baseCoverage, highQuality,
+                                                                        unpaired.Get(), gcContentFragmentTracker, fastaReader);
                                 if (gcContent != -1 && static_cast<unsigned int>(gcContent * 100.0) == 0) cout << "0:0\t" << alignment.Qname() <<"\t" << gcContent<< endl;
                                 if (gcContent != -1) gcBins[static_cast<unsigned int>(gcContent * 100.0)]++;
                             }
