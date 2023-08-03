@@ -95,9 +95,11 @@ namespace rnaseqc {
     // After we switch chromosomes, just drop all the remaining features from the previous chromosome
     void dropFeatures(std::list<Feature> &features, BaseCoverage &coverage)
     {
-        for (auto feat = features.begin(); feat != features.end(); ++feat) if (feat->type == FeatureType::Gene) {
-            coverage.compute(*feat);
-            fragmentTracker.erase(feat->feature_id);
+        for (auto feat = features.begin(); feat != features.end(); ++feat) {
+            if (feat->type == FeatureType::Gene) {
+                coverage.compute(*feat);
+                fragmentTracker.erase(feat->feature_id);
+            }
         }
         features.clear();
     }
@@ -305,7 +307,10 @@ namespace rnaseqc {
     
     // New version of exon metrics
     // More efficient and less buggy
-    double exonAlignmentMetrics(map<chrom, list<Feature>> &features, Metrics &counter, vector<Feature> &blocks, Alignment &alignment, SeqLib::HeaderSequenceVector &sequenceTable, unsigned int length, Strand orientation, BaseCoverage &baseCoverage, const bool highQuality, const bool singleEnd, map<string, FragmentMateEntry> &fragments, Fasta &fastaReader)
+    double exonAlignmentMetrics(map<chrom, list<Feature>> &features, Metrics &counter, vector<Feature> &blocks,
+                                Alignment &alignment, SeqLib::HeaderSequenceVector &sequenceTable, unsigned int length,
+                                Strand orientation, BaseCoverage &baseCoverage, const bool highQuality,
+                                const bool singleEnd, map<string, FragmentMateEntry> &fragments, Fasta &fastaReader)
     {
         string chrName = sequenceTable[alignment.ChrID()].Name;
         chrom chr = chromosomeMap(chrName); //generate the chromosome shorthand name
@@ -414,6 +419,7 @@ namespace rnaseqc {
                     counter.increment("HQ Intronic Reads");
                     counter.increment("HQ Intragenic Reads");
                 }
+                cout << "Intronic_reads: " << alignment.Qname() << endl;
             }
             else
             {
