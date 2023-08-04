@@ -305,7 +305,11 @@ namespace rnaseqc {
     
     // New version of exon metrics
     // More efficient and less buggy
-    double exonAlignmentMetrics(map<chrom, list<Feature>> &features, Metrics &counter, vector<Feature> &blocks, Alignment &alignment, SeqLib::HeaderSequenceVector &sequenceTable, unsigned int length, Strand orientation, BaseCoverage &baseCoverage, const bool highQuality, const bool singleEnd, map<string, FragmentMateEntry> &fragments, Fasta &fastaReader)
+    double exonAlignmentMetrics(map<chrom, list<Feature>> &features, Metrics &counter,
+                                vector<Feature> &blocks, Alignment &alignment,
+                                SeqLib::HeaderSequenceVector &sequenceTable, unsigned int length,
+                                Strand orientation, BaseCoverage &baseCoverage, const bool highQuality,
+                                const bool singleEnd, map<string, FragmentMateEntry> &fragments, Fasta &fastaReader)
     {
         string chrName = sequenceTable[alignment.ChrID()].Name;
         chrom chr = chromosomeMap(chrName); //generate the chromosome shorthand name
@@ -321,6 +325,8 @@ namespace rnaseqc {
         bool intragenic = false, transcriptPlus = false, transcriptMinus = false, ribosomal = false, doExonMetrics = false, exonic = false; //various booleans for keeping track of the alignment
         
         Strand read_strand = feature_strand(alignment, orientation);
+
+        map<string, float> gene_to_block_overlap_size;
         
         for (auto block = blocks.begin(); block != blocks.end(); ++block)
         {
@@ -336,6 +342,8 @@ namespace rnaseqc {
                 {
                     exonic = true;
                     int intersectionSize = partialIntersect(*result, *block);
+                    gene_to_block_overlap_size[result->gene_id] += intersectionSize;
+                    
                     //check that this block fully overlaps the feature
                     //(if any bases of the block don't overlap, then the read is discarded)
                     if (intersectionSize == block->end - block->start)
@@ -358,14 +366,20 @@ namespace rnaseqc {
                 if (result->ribosomal) ribosomal = true;
             }
             delete results; //clean up dynamic allocation
-        }
+        } // end of foreach block
         
-        if (genes.size() >= 1)
+        if (genes.size() >= 1) // if any alignment block (so if read was mapped)
         {
             //if there was more than one block, iterate through each block's set of genes and intersect them
             //In the end, we only care about genes that are common to each block
             //In theory, there's only one gene per block (in most cases) but I won't limit us on that assumption
             set<string> last = genes.front();
+
+            /*
+            
+            // Instead of using the short-read logic of ignoring reads that map to multiple genes,
+            // we're going to choose the gene that it maps to with the greatest amount of overlap.  (bhaas)
+              
             for (int i = 1; i < genes.size(); ++i)
             {
                 set<string> tmp;
@@ -373,7 +387,27 @@ namespace rnaseqc {
                 last = tmp;
             }
             //after the intersection, iterate over the remaining genes and record their coverage
-            //at this point, "last" contains the set of genes which were unamgiguously aligned to
+            */
+
+            // new gene selection logic (bhaas)
+            if (gene_to_block_overlap_size.size() > 0) {
+                string gene_max_overlap;
+                int max_overlap = 0;
+                for (auto gene = gene_to_block_overlap_size.begin(); gene != gene_to_block_overlap_size.end(); ++gene) {
+                    string gene_id = gene->first;
+                    int overlap = gene->second;
+
+                    if (overlap > max_overlap) {
+                        max_overlap = overlap;
+                        gene_max_overlap = gene_id;
+                    }
+                }
+                last.insert(gene_max_overlap);
+            }
+            // back to regularly scheduled programming. (bhaas)                
+            
+            
+            //at this point, "last" contains the set of genes which were unambiguously aligned to
             for (auto gene = last.begin(); gene != last.end(); ++gene)
             {
                 if (highQuality) {
@@ -392,9 +426,11 @@ namespace rnaseqc {
                 }
                 doExonMetrics = true;
             }
+
             //check if this is a globin read
             set<string> globinIntersection, unambiguousGeneNames;
             for (const string& gene_id : last) unambiguousGeneNames.insert(geneNames[gene_id]); // translate set of gene_ids to set of gene names
+
             set_intersection(unambiguousGeneNames.begin(), unambiguousGeneNames.end(), blacklistedGlobins.begin(), blacklistedGlobins.end(), inserter(globinIntersection, globinIntersection.begin()));
             if (globinIntersection.empty())
             {
