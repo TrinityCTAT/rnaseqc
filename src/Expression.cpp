@@ -419,7 +419,7 @@ namespace rnaseqc {
                     counter.increment("HQ Intronic Reads");
                     counter.increment("HQ Intragenic Reads");
                 }
-                cout << "Intronic_reads: " << alignment.Qname() << endl;
+                // cout << "Intronic_reads: " << alignment.Qname() << endl;
             }
             else
             {
@@ -443,7 +443,11 @@ namespace rnaseqc {
             //They had exon coverage, but aligned to multiple genes
             //Any exon and gene coverage they had was discarded and not recorded
             counter.increment("Ambiguous Reads");
-            if (highQuality) counter.increment("HQ Ambiguous Reads");
+            if (highQuality) {
+                counter.increment("HQ Ambiguous Reads");
+                cout << "HQ_Ambiguous_reads: " << alignment.Qname() << endl;
+
+            }
         }
         if (ribosomal) counter.increment("rRNA Reads");
         //also record strandedness counts
