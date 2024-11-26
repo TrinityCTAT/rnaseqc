@@ -210,6 +210,11 @@ int main(int argc, char* argv[])
         chrom current_chrom = 0;
         int32_t last_position = 0; // For some reason, htslib has decided that this will be the datatype used for positions
 
+        
+        vector<unsigned int> read_lengths;
+        unsigned int sum_read_lengths = 0;
+        
+        
         //Begin parsing the bam.  Each alignment is run through various sets of metrics
         {
             Alignment alignment; //current bam alignment
@@ -239,6 +244,8 @@ int main(int argc, char* argv[])
             if (VERBOSITY) cout<<"Parsing bam..."<<endl;
             time(&report_time);
             time(&t2);
+
+            
             while (bam.next(alignment))
             {
                 //try to print an update to stdout every 250,000 reads, but no more than once every 10 seconds
@@ -262,6 +269,11 @@ int main(int argc, char* argv[])
                 if (!(alignment.SecondaryFlag() || alignment.QCFailFlag() || alignment.SupplementaryFlag()))
                 {
                     counter.increment("Unique Mapping, Vendor QC Passed Reads");
+
+                    unsigned read_len = alignment.Sequence().length();
+                    read_lengths.push_back(read_len);
+                    sum_read_lengths += read_len;
+                    
                     //raw counts:
                     if (!alignment.PairedFlag()) counter.increment("Unpaired Reads");
                     if (alignment.MappedFlag())
@@ -521,6 +533,15 @@ int main(int argc, char* argv[])
             exonReport.close();
         }
 
+        // get read length stats.
+        std::sort(read_lengths.begin(), read_lengths.end());
+        unsigned int num_uniq_mapped_reads = read_lengths.size();
+        float mean_read_length = sum_read_lengths / static_cast<float>(num_uniq_mapped_reads);
+        unsigned int max_read_length = read_lengths[read_lengths.size()-1];
+        unsigned int median_read_length =  computeMedian(read_lengths.size(), read_lengths.begin());
+        unsigned int third_quartile_read_length = read_lengths[static_cast<int>(0.75 * read_lengths.size())];
+        unsigned int first_quartile_read_length = read_lengths[static_cast<int>(0.25 * read_lengths.size())];
+        
         ofstream output(outputDir.Get()+"/"+SAMPLENAME+".metrics.tsv");
         //output rates and other fractions to the report
         output << "Sample\t" << SAMPLENAME << endl;
@@ -553,7 +574,12 @@ int main(int argc, char* argv[])
         //automatically dump the raw counts of all metrics to the file
         output << counter;
         //append metrics that were manually tracked
-        output << "Read Length\t" << readLength << endl;
+        //output << "Read Length\t" << readLength << endl;
+        output << "Mean read length\t" << mean_read_length << endl;
+        output << "Median read length\t" << median_read_length << endl;
+        output << "Third quartile read length\t" << third_quartile_read_length << endl;
+        output << "First quartile read length\t" << first_quartile_read_length << endl;
+        output << "Maximum read length\t" << max_read_length << endl;
         output << "Genes Detected\t" << genesDetected << endl;
         output << "Estimated Library Complexity\t" << minReads << endl;
         output << "Genes used in 3' bias\t" << bias.countGenes() << endl;
