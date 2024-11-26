@@ -1,0 +1,93 @@
+---
+title: "multi_rnaseqc+_plotting"
+author: "bhaas"
+date: '2024-11-26'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+```{r}
+
+metrics_files = list.files(path=".", pattern="*rnaseqc.metrics.tsv")
+
+metrics_df = NULL
+
+for (metric_file in metrics_files) {
+    
+    df = read.csv(metric_file, sep="\t", header=F, row.names=1)
+    df = data.frame(t(df))
+    metrics_df = bind_rows(metrics_df,df)
+    
+}
+
+metrics_df$Sample = str_replace(metrics_df$Sample, ".bam", "")
+
+metrics_df
+```
+
+
+```{r}
+
+write.table(metrics_df, file="metrics_summary.tsv", sep="\t", row.names=F, quote=F)
+
+```
+
+
+```{r}
+
+metrics_df %>% select(Sample, Exonic.Rate, Intronic.Rate, Intergenic.Rate) %>%
+    gather(key=feature_type, val=rate, -Sample) %>%
+    mutate(rate = as.numeric(rate)) %>%
+    mutate(feature_type = factor(feature_type, levels = rev(c('Exonic.Rate', 'Intergenic.Rate', 'Intronic.Rate') ) )) %>%
+    ggplot(aes(x=Sample, y=rate, fill=feature_type)) + 
+    geom_col() +
+    #geom_col(stat='identity', position='dodge') +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+    ggtitle("Genome Feature Mapping Stats")
+
+
+```
+
+```{r}
+
+metrics_df %>% select(Sample, Mapped.Reads) %>% 
+    mutate(Mapped.Reads = as.numeric(Mapped.Reads)) %>%
+    ggplot(aes(x=Sample, y=Mapped.Reads)) +
+    geom_col() + 
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ggtitle("Counts of genome-mapped reads")
+
+
+
+```
+
+
+```{r}
+
+
+metrics_df %>% select(Sample, Genes.Detected) %>% 
+    mutate(Genes.Detected = as.numeric(Genes.Detected)) %>%
+    ggplot(aes(x=Sample, y=Genes.Detected)) +
+    geom_col() + 
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ggtitle("Counts of genes detected")
+
+
+```
+
+
+
+
+
+
+
+
+
